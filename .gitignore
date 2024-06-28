@@ -1,0 +1,8 @@
+.idea/*
+*.mp3
+*.mp4
+*.mov
+*.avi
+*.wav
+*.env
+src/venv/*
