@@ -3,67 +3,57 @@ import random
 from datetime import datetime
 
 import numpy as np
-from moviepy.editor import *
+from moviepy.editor import VideoFileClip, concatenate_videoclips, AudioFileClip
 
 
 class Combiner:
 
-    def __init__(self, end_time=30, step=2.5, height = 1080,width = 1920):
-        self.end_time: int = end_time
-        self.step: float = step
-        self.amount: int = 1
-        self.save_dir = os.path.join(os.getcwd(), 'assets/@done/' + str(datetime.now().strftime("%d.%m.%y %H.%M.%S")))
-        self.height: int = height
-        self.width: int = width
+    def __init__(self, end_time=30, step=2.5, height=1080, width=1920):
+        self.end_time = end_time
+        self.step = step
+        self.height = height
+        self.amount = 1
+        self.width = width
+        self.save_dir = os.path.join(os.getcwd(), 'assets/@done/', datetime.now().strftime("%d.%m.%y %H.%M.%S"))
 
     def __str__(self):
-        string = (
-            f"{self.amount} clip(s) {self.width}x{self.height} with step of {self.step} and {self.end_time}s duration")
-        return string
+        return f"{self.amount} clip(s) {self.width}x{self.height} with step of {self.step} and {self.end_time}s duration"
+
+    def _create_subclips(self, clip):
+        subclip_times = np.arange(0, clip.duration, self.step)
+        return [
+            clip.subclip(t_start, min(t_start + self.step, clip.duration))
+            for t_start in subclip_times if t_start + self.step <= clip.duration
+        ]
 
     def _make_subclips_from_videos(self, videos):
-        def create_subclips(clip, step):
-            subclip_times = np.arange(0, clip.duration, step)
-            subclips = list(map(lambda t_start: clip.subclip(t_start, min(t_start + step, clip.duration)),
-                                filter(lambda t_start: t_start + step <= clip.duration, subclip_times)))
-            return subclips
-
-        clips = []
         random.shuffle(videos)
-        processed = 0
+        clips = []
 
-        for video in videos:
-            processed += 1
-            clip = VideoFileClip(filename=video, target_resolution=(self.height, self.width))
-            yield f"Processing video {processed}/{len(videos)}: {os.path.basename(clip.filename)} ({clip.duration}s)"
-            clips.append(create_subclips(clip, self.step))
-
-        max_subclips = max(len(subclips) for subclips in clips)
-        normalized_array_clips = []
-
-        for i in range(max_subclips):
-            for subclips in clips:
-                if i < len(subclips):
-                    normalized_array_clips.append(subclips[i])
+        for index, video in enumerate(videos):
+            clip = VideoFileClip(video, target_resolution=(self.height, self.width))
+            yield f"Processing video {index + 1}/{len(videos)}: {os.path.basename(clip.filename)} ({clip.duration}s)"
+            clips.extend(self._create_subclips(clip))
 
         yield "Subclips created and normalized."
-        return normalized_array_clips
+        return clips
 
-    def combine(self, videos, audio):
-        subclips_from_videos = yield from self._make_subclips_from_videos(videos)
-        merge_clips = concatenate_videoclips(subclips_from_videos).subclip(0, self.end_time)
-        for a in audio:
-            yield f"Combining {len(videos)} videos with audio {a}"
-            audio_clip = AudioFileClip(a).subclip(0, self.end_time)
-            final_clip = merge_clips.set_audio(audio_clip)
+    def _combine_with_audio(self, video_clips, audio_file):
+        audio_clip = AudioFileClip(audio_file).subclip(0, self.end_time)
+        final_clip = concatenate_videoclips(video_clips).subclip(0, self.end_time).set_audio(audio_clip)
 
-            if not os.path.isdir(self.save_dir):
-                os.mkdir(self.save_dir)
+        if not os.path.isdir(self.save_dir):
+            os.makedirs(self.save_dir)
 
-            audio_file_name = os.path.basename(a)
-            audio_name = os.path.splitext(audio_file_name)[0]
-            path = os.path.join(self.save_dir, audio_name + ".mp4")
+        audio_name = os.path.splitext(os.path.basename(audio_file))[0]
+        output_path = os.path.join(self.save_dir, f"{audio_name}.mp4")
 
-            yield "Starting final video rendering..."
-            final_clip.write_videofile(path)
-            yield f"Video saved to {path.split("/")[-1]}"
+        yield f"Starting final video rendering with {audio_name}"
+        final_clip.write_videofile(output_path)
+        yield f"Video saved to {os.path.basename(output_path)}"
+
+    def combine(self, videos, audios):
+        video_clips = yield from self._make_subclips_from_videos(videos)
+        for audio in audios:
+            yield from self._combine_with_audio(video_clips, audio)
+        yield f"{len(audios)} videos rendered!"
