@@ -3,7 +3,7 @@ import random
 from datetime import datetime
 
 import numpy as np
-from moviepy.editor import VideoFileClip, concatenate_videoclips, AudioFileClip
+from moviepy.editor import VideoFileClip, concatenate_videoclips, AudioFileClip, afx
 
 
 class Combiner:
@@ -39,8 +39,18 @@ class Combiner:
         return clips
 
     def _combine_with_audio(self, video_clips, audio_file):
-        audio_clip = AudioFileClip(audio_file).subclip(0, self.end_time)
-        final_clip = concatenate_videoclips(video_clips).subclip(0, self.end_time).set_audio(audio_clip)
+        concatenated_clip = concatenate_videoclips(video_clips).subclip(0, self.end_time)
+
+        # Load and adjust the audio to match the video duration
+        audio_clip = AudioFileClip(audio_file)
+        audio_duration = concatenated_clip.duration
+        if audio_clip.duration < audio_duration:
+            audio_clip = afx.audio_loop(audio_clip, duration=audio_duration)
+        else:
+            audio_clip = audio_clip.subclip(0, audio_duration)
+
+        # Set the audio of the concatenated and looped video clip
+        final_clip = concatenated_clip.set_audio(audio_clip)
 
         if not os.path.isdir(self.save_dir):
             os.makedirs(self.save_dir)
