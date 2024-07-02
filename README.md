@@ -13,8 +13,8 @@ This project combines video clips with audio files, resizing the video to a spec
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/video-audio-combiner.git
-    cd video-audio-combiner
+    git clone https://github.com/marcowhite/shortzpwn.git
+    cd shortzpwn
     ```
 
 2. Create a virtual environment and activate it:
@@ -33,5 +33,5 @@ This project combines video clips with audio files, resizing the video to a spec
 1. Prepare your video and audio files in the `assets/video` and `assets/audio` directories respectively.
 2. Run the application to open the GUI:
     ```sh
-    python main.py
+    python src/main.py
     ```
