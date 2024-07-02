@@ -4,9 +4,7 @@ This project combines video clips with audio files, resizing the video to a spec
 
 ## Features
 
-- **Subclip Creation**: Create subclips from video files based on a specified step duration.
 - **Video Concatenation**: Concatenate multiple video subclips into a single video.
-- **Audio Adjustment**: Adjust the audio to match the duration of the concatenated video, either by looping or trimming.
 - **Video Resizing**: Resize videos to a specified resolution.
 - **Output**: Save the final combined video to a specified directory.
 - **GUI Interface**: Interact with the application through a graphical user interface.
