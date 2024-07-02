@@ -17,47 +17,11 @@ class Combiner:
         self.width: int = 1920
 
     def __str__(self):
-        string = ("End time: " + str(self.end_time)
-                  + "\nStep: " + str(self.step)
-                  + "\nAmount: " + str(self.amount)
-                  + "\nSave dir: " + str(self.save_dir)
-                  + "\nHeight: " + str(self.height)
-                  + "\nWidth: " + str(self.width)
-                  )
+        string = (
+            f"{self.amount} clip(s) {self.width}x{self.height} with step of {self.step} and {self.end_time}s duration")
         return string
 
-    def _make_clips_from_videos(self, videos):
-        clips = []
-
-        random.shuffle(videos)
-
-        processed = 0
-        for video in videos:
-            subclips = []
-            processed += 1
-            clip = VideoFileClip(filename=video, target_resolution=(self.height,self.width))
-
-            print(processed, "/", len(videos), str.split(clip.filename, '/')[-1], str(clip.duration))
-
-            start_time = 0
-            while start_time + self.step < clip.duration:
-                subclip = clip.subclip(t_start=start_time, t_end=start_time + self.step)
-                start_time = start_time + self.step
-                subclips.append(subclip)
-
-            clips.append(subclips)
-
-        max_subclips = max(len(subclips) for subclips in clips)
-        normalized_array_clips = []
-
-        for i in range(max_subclips):
-            for subclips in clips:
-                if i < len(subclips):
-                    normalized_array_clips.append(subclips[i])
-
-        return normalized_array_clips
-
-    def _make_clips_from_videos_new(self, videos):
+    def _make_subclips_from_videos(self, videos):
         def create_subclips(clip, step):
             subclip_times = np.arange(0, clip.duration, step)
             subclips = list(map(lambda t_start: clip.subclip(t_start, min(t_start + step, clip.duration)),
@@ -65,16 +29,13 @@ class Combiner:
             return subclips
 
         clips = []
-
         random.shuffle(videos)
-
         processed = 0
+
         for video in videos:
             processed += 1
-            clip = VideoFileClip(filename=video, target_resolution=(self.height,self.width))
-
+            clip = VideoFileClip(filename=video, target_resolution=(self.height, self.width))
             print(processed, "/", len(videos), str.split(clip.filename, '/')[-1], str(clip.duration))
-
             clips.append(create_subclips(clip, self.step))
 
         max_subclips = max(len(subclips) for subclips in clips)
@@ -88,14 +49,11 @@ class Combiner:
         return normalized_array_clips
 
     def combine(self, videos, audio):
-        print("Starting with combine\n",self)
+        print(self)
 
-        clips = self._make_clips_from_videos_new(videos)
-
-        merge_clips = concatenate_videoclips(clips).subclip(0, self.end_time)
-
-        audio_clip = AudioFileClip(audio).subclip(0, self.end_time)
-
+        subclips_from_videos = self._make_subclips_from_videos(videos)
+        merge_clips = concatenate_videoclips(subclips_from_videos).subclip(0, self.end_time)
+        audio_clip = AudioFileClip(audio)
         final_clip = merge_clips.set_audio(audio_clip)
 
         if not os.path.isdir(self.save_dir):
